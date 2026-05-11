@@ -6227,6 +6227,7 @@ public struct ChatEvent: Codable, Sendable {
     public let seq: Int
     public let state: AnyCodable
     public let message: AnyCodable?
+    public let deltatext: String?
     public let errormessage: String?
     public let errorkind: AnyCodable?
     public let usage: AnyCodable?
@@ -6239,6 +6240,7 @@ public struct ChatEvent: Codable, Sendable {
         seq: Int,
         state: AnyCodable,
         message: AnyCodable?,
+        deltatext: String?,
         errormessage: String?,
         errorkind: AnyCodable?,
         usage: AnyCodable?,
@@ -6250,6 +6252,7 @@ public struct ChatEvent: Codable, Sendable {
         self.seq = seq
         self.state = state
         self.message = message
+        self.deltatext = deltatext
         self.errormessage = errormessage
         self.errorkind = errorkind
         self.usage = usage
@@ -6263,6 +6266,7 @@ public struct ChatEvent: Codable, Sendable {
         case seq
         case state
         case message
+        case deltatext = "deltaText"
         case errormessage = "errorMessage"
         case errorkind = "errorKind"
         case usage
