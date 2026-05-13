@@ -134,16 +134,16 @@ function readChatErrorKind(value: unknown): ErrorKind | undefined {
     : undefined;
 }
 
-function resolveBroadcastDeltaText(params: {
+function resolveBroadcastDelta(params: {
   text: string;
   previousBroadcastText: string | undefined;
-}): string | undefined {
+}): { deltaText: string; replace?: true } {
   const previous = params.previousBroadcastText ?? "";
   if (previous && !params.text.startsWith(previous)) {
-    return undefined;
+    return { deltaText: params.text, replace: true };
   }
   const deltaText = params.text.slice(previous.length);
-  return deltaText || undefined;
+  return { deltaText: deltaText || params.text };
 }
 
 export type AgentEventHandlerOptions = {
@@ -432,7 +432,7 @@ export function createAgentEventHandler({
     if (now - last < 150) {
       return;
     }
-    const deltaText = resolveBroadcastDeltaText({
+    const broadcastDelta = resolveBroadcastDelta({
       text: mergedText,
       previousBroadcastText: chatRunState.deltaLastBroadcastText.get(clientRunId),
     });
@@ -446,7 +446,8 @@ export function createAgentEventHandler({
       ...(spawnedBy && { spawnedBy }),
       seq,
       state: "delta" as const,
-      ...(deltaText !== undefined && { deltaText }),
+      deltaText: broadcastDelta.deltaText,
+      ...(broadcastDelta.replace ? { replace: true as const } : {}),
       message: {
         role: "assistant",
         content: [{ type: "text", text: mergedText }],
@@ -502,7 +503,7 @@ export function createAgentEventHandler({
     }
 
     const now = Date.now();
-    const deltaText = resolveBroadcastDeltaText({
+    const delta = resolveBroadcastDelta({
       text,
       previousBroadcastText: chatRunState.deltaLastBroadcastText.get(clientRunId),
     });
@@ -513,7 +514,8 @@ export function createAgentEventHandler({
       ...(spawnedBy && { spawnedBy }),
       seq,
       state: "delta" as const,
-      ...(deltaText !== undefined && { deltaText }),
+      deltaText: delta.deltaText,
+      ...(delta.replace ? { replace: true as const } : {}),
       message: {
         role: "assistant",
         content: [{ type: "text", text }],
