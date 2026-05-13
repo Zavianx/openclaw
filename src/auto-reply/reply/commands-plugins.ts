@@ -212,7 +212,9 @@ function findTrustedCatalogPackageInstall(packageName: string):
 async function installPluginFromPluginsCommand(params: {
   raw: string;
   snapshot: ConfigSnapshotForInstallPersist;
-}): Promise<{ ok: true; pluginId: string } | { ok: false; error: string }> {
+}): Promise<
+  { ok: true; pluginId: string; warnings?: readonly string[] } | { ok: false; error: string }
+> {
   const fileSpec = resolveFileNpmSpecToLocalPath(params.raw);
   if (fileSpec && !fileSpec.ok) {
     return { ok: false, error: fileSpec.error };
@@ -278,9 +280,17 @@ async function installPluginFromPluginsCommand(params: {
 
   const clawhubSpec = parseClawHubPluginSpec(params.raw);
   if (clawhubSpec) {
+    const warnings: string[] = [];
+    const logger = createPluginInstallLogger();
     const result = await installPluginFromClawHub({
       spec: params.raw,
-      logger: createPluginInstallLogger(),
+      logger: {
+        info: logger.info,
+        warn: (message) => {
+          warnings.push(message);
+          logger.warn(message);
+        },
+      },
     });
     if (!result.ok) {
       if (result.code === CLAWHUB_INSTALL_ERROR_CODE.CLAWHUB_RISK_ACKNOWLEDGEMENT_REQUIRED) {
@@ -307,7 +317,7 @@ async function installPluginFromPluginsCommand(params: {
         clawhubChannel: result.clawhub.clawhubChannel,
       },
     });
-    return { ok: true, pluginId: result.pluginId };
+    return { ok: true, pluginId: result.pluginId, warnings };
   }
 
   const officialNpmTrust = resolveOfficialExternalNpmPackageTrust({
@@ -468,7 +478,10 @@ export const handlePluginsCommand: CommandHandler = async (params, allowTextComm
     return {
       shouldContinue: false,
       reply: {
-        text: `🔌 Installed plugin "${installed.pluginId}". Gateway restart will load the new plugin source.`,
+        text: [
+          `🔌 Installed plugin "${installed.pluginId}". Gateway restart will load the new plugin source.`,
+          ...(installed.warnings ?? []).map((warning) => `⚠️ ${warning}`),
+        ].join("\n"),
       },
     };
   }
